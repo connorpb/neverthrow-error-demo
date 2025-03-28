@@ -1,32 +1,25 @@
 import { Err, err, errAsync, Ok, ok, okAsync, Result, ResultAsync } from "neverthrow";
 
-function sync1(bool: boolean) {
-    if (bool) return ok(true)
-    return err("bad");
-} // return type Ok<boolean, never> | Err<never, "bad">
+const sync1 = (bool: boolean) => bool ? ok(true) : err("bad");
+// return type Ok<boolean, never> | Err<never, "bad">
 
-function sync2(bool2: boolean) {
-    if (bool2) return ok(100)
-    return err("terrible")
-}
+const sync2 = (bool2: boolean) => bool2 ? ok(100) : err("terrible")
+// return type Ok<number, never> | Err<never, "terrible">
 
-function async1(bool: boolean) {
-    if (bool) return okAsync(true)
-    return errAsync("bad");
-} // return type OkAsync<boolean, never> | ErrAsync<never, string>
+const sync1Annotated = (bool: boolean): Result<boolean, "bad"> => bool ? ok(true) : err("bad");
+// return type collapse by mannual annotation to Result<boolean, "bad">
 
-function async2(bool2: boolean) {
-    if (bool2) return okAsync(100)
-    return errAsync("terrible")
-}
+const async1 = (bool: boolean) => bool ? okAsync(true) : errAsync("bad")
+// return type ResultAsync<boolean, never> | ResultAsync<never, string>
+
+const async2 = (bool2: boolean) => bool2 ? okAsync(100) : errAsync("terrible")
+// return type ResultAsync<number, never> | ResultAsync<never, string>
 
 const test1 = (bool: boolean) => sync1(bool).andThen(result => sync2(result)) // this expression is not callable - ts(2349)
 const test2 = (bool: boolean) => (sync1(bool) as Result<boolean, "bad">).andThen(result => sync2(result)) // succeeds on assertion
 const test3 = (bool: boolean) => sync1(bool).andThen<Result<boolean, "bad">>(result => sync2(result)) // this expression is not callable - ts(2349)
 const test4 = (bool: boolean) => sync1(bool).andThen<boolean, "bad">(result => sync2(result)) // this expression is not callable - ts(2349)
-
-const sync1withResultTypeAnnotation: (bool: boolean) => Result<boolean, "bad"> = (bool: boolean) => sync1(bool)
-const test5 = (bool: boolean) => sync1withResultTypeAnnotation(bool).andThen(result => sync2(result)) // succeeds when annotated
+const test5 = (bool: boolean) => sync1Annotated(bool).andThen(result => sync2(result)) // succeeds when manually annotated
 
 const test6 = (bool: boolean) => sync1(bool).asyncAndThen(result => async2(result)) // callable, but result is "any". Async inferred type is correct, ResultAsync<number, string>
 const test7 = (bool: boolean) => sync1(bool).asyncAndThen<number, string>(result => async2(result)) // callable, but result is "any". Annotated type matches inferred type above.
